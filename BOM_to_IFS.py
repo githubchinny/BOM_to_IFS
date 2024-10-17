@@ -23,7 +23,6 @@ import numpy as np
 import os
 import re
 import io
-
 import openpyxl
 import excel_formatting
 import logging
@@ -79,33 +78,6 @@ def update_parent_part(BOM):
                 # print (i, "Parent part {} from previous level {}".format(level[previous_parent_level], previous_parent_level))
                 BOM.at[i,'Parent Part'] = level[previous_parent_level]
     return BOM
-
-# %%
-# def get_ifs_part_cat(env):
-#     import oracledb
-#     import getpass
-#     import db_config
-
-#     if env == 'LIVE':
-#         conn = oracledb.connect(user=db_config.user, password=db_config.LIVE_userpwd, dsn=db_config.LIVE_connect_string)
-#     else:
-#         conn = oracledb.connect(user=db_config.user, password=db_config.Sandbox_userpwd, dsn=db_config.Sandbox_connect_string)
-
-#     sql_stmt = ("select distinct c.part_no, c.unit_meas, p.lot_tracking_code, p.serial_tracking_code, p.serial_rule "
-#         "from ifsapp.inventory_part c "
-#         "left join ifsapp.part_catalog p "
-#         "on c.part_no = p.part_no "
-#         "where c.part_no like 'T%'")
-
-#     try:
-#         conn.is_healthy()
-#         print("Healthy connection!")
-#     except:
-#         print("Unusable connection. Please check the database and network settings.")
-
-#     df_ora = pd.read_sql(sql_stmt, con=conn)
-
-#     return df_ora
 
 # %%
 def db_pool_connection():
@@ -180,13 +152,14 @@ if type_of_script() == 'terminal':
     parser.add_argument("timestamps", metavar='prev_timestamps', type=str, help='timestamp portion from previous migration filename: eg 20230530-2044')
     parser.add_argument("env", metavar='Environment', type=str, help='LIVE or Sandbox')
     # parser.add_argument("incrementer", metavar='Incrementer', type=int)    
-    # parser.add_argument('-d', help='Produce Delta files', action='store_true')
+    parser.add_argument('--disable-delta', help='Use this to switch delta file processing off', action='store_true')
     parser.add_argument('-i', '--ignore', action='append', help="Cols to Ignore from comparison - only needed when we've added/removed a column from migration files")
 
     args = parser.parse_args()
     project = args.project
     prev_timestamps = args.timestamps
     env=args.env
+    DELTA = not args.disable_delta
     ignore_cols_for_comparison = args.ignore
     # incrementer=args.incrementer
 
@@ -216,14 +189,15 @@ project_uc = pattern.split(project.upper())[0]
 
 # read in config file
 config = configparser.ConfigParser()
-config.read('C:/Temp/user_directory.ini')
+config_file = user_dir + '/user_directory.ini'
+config.read(config_file)
 
 # read in gm_dir and gm_docs from config file
 try:
     gm_dir = config[os.getlogin().lower()]['gm_dir']
     gm_docs = config[os.getlogin().lower()]['gmd']
 except:
-    print ("You're probable missing a valid 'C:/Temp/user_directory.ini' file")
+    print ("You're probable missing a valid {} file".format(config_file))
     SystemExit(1)
 
 # this may find more than one sharepoint directory
@@ -464,6 +438,11 @@ if project == 'T50':
     existing_bom2.drop_duplicates(subset='orig_sort', inplace=True)
     # make sure we've retained the original order
     existing_bom2.sort_values('orig_sort', inplace=True)
+
+else:
+    # pass through existing_bom for all other projects
+    existing_bom2 = existing_bom
+
 
 
 # %%
@@ -1341,7 +1320,8 @@ cleansed_df
 # Validation checks before writing out.  Don't write files without an error_count of zero
 
 TEST=False
-DELTA=True
+# delta being set / overridden at the top of the scrpt with args.  Default is DELTA = True
+# DELTA=True
 
 if TEST:
     print ("*** TEST MODE ***")
