@@ -174,6 +174,7 @@ else:
     # env = 'Sandbox'
 
 print ("ignore cols {}".format(ignore_cols_for_comparison))
+print ("DELTA Files = {}".format(DELTA))
 
 # personal one drive
 user_dir = 'C:/Users/USERNAME'
@@ -1494,8 +1495,5 @@ for handler in logit.handlers:
 for handler in logit.handlers:
     if isinstance(handler, logging.FileHandler):
         handler.close()
-
-# %%
-
 
 
