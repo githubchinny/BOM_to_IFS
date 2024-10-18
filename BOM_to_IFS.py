@@ -149,19 +149,23 @@ def get_ifs_part_cat(env):
 if type_of_script() == 'terminal':
     parser = argparse.ArgumentParser()
     parser.add_argument("project", metavar='Project', type=str, help="T50, T50s, T33_XP, etc") 
-    parser.add_argument("timestamps", metavar='prev_timestamps', type=str, help='timestamp portion from previous migration filename: eg 20230530-2044')
     parser.add_argument("env", metavar='Environment', type=str, help='LIVE or Sandbox')
     # parser.add_argument("incrementer", metavar='Incrementer', type=int)    
-    parser.add_argument('--disable-delta', help='Use this to switch delta file processing off', action='store_true')
+    parser.add_argument('--no-delta', help='Use this to switch delta file processing off', action='store_true')
+    parser.add_argument("-t", "--timestamps", metavar='prev_timestamps', type=str, help='timestamp portion from previous migration filename: eg 20230530-2044')
     parser.add_argument('-i', '--ignore', action='append', help="Cols to Ignore from comparison - only needed when we've added/removed a column from migration files")
 
     args = parser.parse_args()
     project = args.project
     prev_timestamps = args.timestamps
     env=args.env
-    DELTA = not args.disable_delta
+    DELTA = not args.no_delta
     ignore_cols_for_comparison = args.ignore
     # incrementer=args.incrementer
+    # Check dependency: if --enable-feature is used, --config-path is mandatory
+    if DELTA and not args.timestamps:   
+        parser.error("-t or --timestamps is required unless you pass --no-delta.")
+        sys.exit(1)
 
 else:
     # set defaults if we're running in jupyter
@@ -174,7 +178,7 @@ else:
     # env = 'Sandbox'
 
 print ("ignore cols {}".format(ignore_cols_for_comparison))
-print ("DELTA Files = {}".format(DELTA))
+print ('Delta files required: {}'.format(DELTA))
 
 # personal one drive
 user_dir = 'C:/Users/USERNAME'
